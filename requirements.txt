@@ -13,6 +13,8 @@ tiktoken
 torch
 tqdm
 transformers>=4.40.0
+accelerate<1.0.0
+scipy<1.15
 bm25s[core]==0.2.1
 fschat
 streamlit
