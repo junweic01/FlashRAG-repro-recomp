@@ -1,7 +1,7 @@
 datasets
 base58
 nltk
-numpy
+numpy<2
 langid
 openai
 peft
@@ -22,3 +22,4 @@ chonkie>=1.0.2, <1.1.0
 gradio>=5.0.0
 rouge-chinese
 jieba
+opencv-python-headless>=4.11.0,<4.12

@@ -136,9 +136,9 @@ def recomp(args):
     # ###### Specified parameters ######
     refiner_name = "recomp-abstractive"  # recomp-extractive
     model_dict = {
-        "nq": "model/recomp_nq_abs",
-        "triviaqa": "model/recomp_tqa_abs",
-        "hotpotqa": "model/recomp_hotpotqa_abs",
+        "nq": "/home/ec2-user/flashrag/recomp/nq",
+        "triviaqa": "/home/ec2-user/flashrag/recomp/tqa",
+        "hotpotqa": "/home/ec2-user/flashrag/recomp/hotpotqa",
     }
 
     refiner_model_path = model_dict.get(args.dataset_name, None)
@@ -157,6 +157,8 @@ def recomp(args):
         "refiner_topk": 5,
         "refiner_pooling_method": refiner_pooling_method,
         "refiner_encode_max_length": refiner_encode_max_length,
+        "framework": "hf",  # Use HuggingFace instead of vLLM for better memory management
+        "generator_batch_size": 1,  # Reduce batch size to save memory
         "save_note": refiner_name,
         "gpu_id": args.gpu_id,
         "dataset_name": args.dataset_name,
