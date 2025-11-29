@@ -127,6 +127,11 @@ class SequentialPipeline(BasicPipeline):
 
         dataset = self.evaluate(dataset, do_eval=do_eval, pred_process_fun=pred_process_fun)
 
+        # for i, ans in enumerate(pred_answer_list[:DEBUG_N]):
+        #     print("\nFINAL ANSWER - SAMPLE", i)
+        #     print(ans)
+        #     print("============================================\n")
+
         return dataset
 
 
