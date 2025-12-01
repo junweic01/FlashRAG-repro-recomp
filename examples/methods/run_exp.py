@@ -773,6 +773,33 @@ def simpledeepsearcher(args):
     result = pipeline.run(test_data)
 
 
+def claude(args):
+    """
+    Run experiment with Claude Refiner.
+    """
+    save_note = "claude"
+    config_dict = {
+        "save_note": save_note,
+        "gpu_id": args.gpu_id,
+        "dataset_name": args.dataset_name,
+        "split": args.split,
+        "refiner_name": "claude",
+        "refiner_model_path": "claude-sonnet-4-20250514-v1:0",
+        "refiner_input_prompt_flag": False
+    }
+
+    # Load base config
+    config = Config("claude_config.yaml", config_dict)
+    
+    # Load dataset
+    all_split = get_dataset(config)
+    test_data = all_split[args.split]
+
+    from flashrag.pipeline import SequentialPipeline
+    pipeline = SequentialPipeline(config)
+    result = pipeline.run(test_data)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Running exp")
@@ -798,6 +825,7 @@ if __name__ == "__main__":
         "flare": flare,
         "iterretgen": iterretgen,
         "ircot": ircot,
+        "claude": claude,
         "trace": trace,
         "adaptive": adaptive,
         "rqrag": rqrag,
