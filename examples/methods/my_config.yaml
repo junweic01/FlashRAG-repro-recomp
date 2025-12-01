@@ -20,7 +20,7 @@ model2pooling:
 
 # Indexes path for retrieval models
 method2index:
-  e5: "/home/ubuntu/FlashRAG-repro-recomp/wiki18_100w_1_10_indexes/e5_Flat.index"
+  e5: "/home/ubuntu/FlashRAG-repro-recomp/indexes/e5_Flat.index"
   bm25: ~
   contriever: ~
 
