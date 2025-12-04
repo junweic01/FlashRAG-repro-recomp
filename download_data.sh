@@ -5,7 +5,7 @@ source "$HOME/miniconda3/etc/profile.d/conda.sh"
 
 conda activate flashrag
 
-cd /home/ec2-user/flashrag
+cd /home/ubuntu/FlashRAG-repro-recomp
 mkdir -p ./models/
 mkdir -p ./recomp/
 
@@ -23,7 +23,7 @@ hf download fangyuan/nq_abstractive_compressor --local-dir ./recomp/nq
 hf download fangyuan/tqa_abstractive_compressor --local-dir ./recomp/tqa
 hf download fangyuan/hotpotqa_abstractive --local-dir ./recomp/hotpotqa
 
-cd /home/ec2-user/flashrag/datasets/retrieval-corpus/
+cd /home/ubuntu/FlashRAG-repro-recomp/datasets/retrieval-corpus/
 unzip wiki18_100w.zip
 
 # total 21015324 lines
