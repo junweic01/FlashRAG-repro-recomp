@@ -150,7 +150,7 @@ def get_refiner(config, retriever=None, generator=None):
             refiner_class = "ExtractiveRefiner"
     elif 'bert' in arch:
         refiner_class = "ExtractiveRefiner"
-    elif 'T5' in arch or 'Bart' in arch:
+    elif 't5' in arch or 'bart' in arch:
         refiner_class = "AbstractiveRecompRefiner"
     elif "lingua" in refiner_name:
         refiner_class = "LLMLinguaRefiner"
@@ -158,6 +158,9 @@ def get_refiner(config, retriever=None, generator=None):
         refiner_class = "SelectiveContextRefiner"
     elif "kg-trace" in refiner_name:
         return getattr(REFINER_MODULE, "KGTraceRefiner")(config, retriever, generator)
+    elif refiner_name.lower() in ["llm-refiner", "decoder-llm-refiner", "open-llm-refiner"] or \
+            any(key in arch for key in ["causallm", "gpt", "llama", "mistral"]):
+        refiner_class = "LLMAbstractiveRefiner"
     else:
         raise ValueError("No implementation!")
 

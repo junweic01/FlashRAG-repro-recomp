@@ -13,7 +13,7 @@ class BaseRefiner:
         self.config = config
         self.name = config["refiner_name"]
         self.model_path = config["refiner_model_path"]
-        self.device = config["device"]
+        self.device = config["refiner_device"] if "refiner_device" in config else config["device"]
         self.input_prompt_flag = config["refiner_input_prompt_flag"] if "refiner_input_prompt_flag" in config else False
 
     def run(self, item) -> str:

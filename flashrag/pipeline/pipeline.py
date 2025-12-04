@@ -1,3 +1,4 @@
+import torch
 from flashrag.evaluator import Evaluator
 from flashrag.dataset.utils import split_dataset, merge_dataset
 from flashrag.utils import get_retriever, get_generator, get_refiner, get_judger
@@ -49,7 +50,13 @@ class SequentialPipeline(BasicPipeline):
         """
 
         super().__init__(config, prompt_template)
-        if generator is None:
+        self.lazy_generator = config["lazy_load_generator"] if "lazy_load_generator" in config else False
+        self.lazy_refiner = config["lazy_load_refiner"] if "lazy_load_refiner" in config else False
+        self.release_retriever_after_search = (
+            config["release_retriever_after_search"] if "release_retriever_after_search" in config else False
+        )
+
+        if generator is None and not self.lazy_generator:
             self.generator = get_generator(config)
         else:
             self.generator = generator
@@ -63,7 +70,7 @@ class SequentialPipeline(BasicPipeline):
 
         self.use_fid = config["use_fid"]
 
-        if config["refiner_name"] is not None:
+        if config["refiner_name"] is not None and not self.lazy_refiner:
             self.refiner = get_refiner(config, self.retriever, self.generator)
         else:
             self.refiner = None
@@ -83,6 +90,13 @@ class SequentialPipeline(BasicPipeline):
         input_query = dataset.question
         retrieval_results = self.retriever.batch_search(input_query)
         dataset.update_output("retrieval_result", retrieval_results)
+
+        if self.release_retriever_after_search:
+            del self.retriever
+            torch.cuda.empty_cache()
+
+        if self.refiner is None and self.config["refiner_name"] is not None:
+            self.refiner = get_refiner(self.config, None, self.generator)
 
         if self.refiner:
             input_prompt_flag = self.refiner.input_prompt_flag
@@ -122,6 +136,11 @@ class SequentialPipeline(BasicPipeline):
         # delete used refiner to release memory
         if self.refiner:
             del self.refiner
+            torch.cuda.empty_cache()
+
+        if self.generator is None:
+            self.generator = get_generator(self.config)
+
         pred_answer_list = self.generator.generate(input_prompts)
         dataset.update_output("pred", pred_answer_list)
 

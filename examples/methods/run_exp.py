@@ -12,7 +12,7 @@ def naive(args):
     from flashrag.pipeline import SequentialPipeline
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -26,7 +26,7 @@ def zero_shot(args):
     config_dict = {"save_note": save_note, "gpu_id": args.gpu_id, "dataset_name": args.dataset_name, "split": args.split}
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -73,7 +73,7 @@ def aar(args):
     }
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -116,7 +116,44 @@ def llmlingua(args):
     }
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
+    all_split = get_dataset(config)
+    test_data = all_split[args.split]
+
+    from flashrag.pipeline import SequentialPipeline
+
+    pipeline = SequentialPipeline(config)
+    result = pipeline.run(test_data)
+
+
+def llm_refiner(args):
+    """
+    Use an open-source decoder-only model to summarize retrieved documents before generation.
+    """
+    refiner_name = "llm-refiner"
+    config_dict = {
+        "refiner_name": refiner_name,
+        "save_note": refiner_name,
+        "gpu_id": args.gpu_id,
+        "dataset_name": args.dataset_name,
+        "split": args.split,
+    }
+
+    if args.refiner_model_path is not None:
+        config_dict["refiner_model_path"] = args.refiner_model_path
+    if args.refiner_max_input_length is not None:
+        config_dict["refiner_max_input_length"] = args.refiner_max_input_length
+    if args.refiner_max_output_length is not None:
+        config_dict["refiner_max_output_length"] = args.refiner_max_output_length
+    if args.refiner_batch_size is not None:
+        config_dict["refiner_batch_size"] = args.refiner_batch_size
+    if args.refiner_device is not None:
+        config_dict["refiner_device"] = args.refiner_device
+    if args.refiner_torch_dtype is not None:
+        config_dict["refiner_torch_dtype"] = args.refiner_torch_dtype
+
+    # preparation
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -136,16 +173,16 @@ def recomp(args):
     # ###### Specified parameters ######
     refiner_name = "recomp-abstractive"  # recomp-extractive
     model_dict = {
-        "nq": "model/recomp_nq_abs",
-        "triviaqa": "model/recomp_tqa_abs",
-        "hotpotqa": "model/recomp_hotpotqa_abs",
+        "nq": "/data/user_data/hanzhanz/recomp/nq_abs",
+        "triviaqa": "/data/user_data/hanzhanz/recomp/tqa_abs",
+        "hotpotqa": "/data/user_data/hanzhanz/recomp/hotpotqa_abs",
     }
 
     refiner_model_path = model_dict.get(args.dataset_name, None)
     refiner_max_input_length = 1024
     refiner_max_output_length = 512
     # parameters for extractive compress
-    refiner_topk = 5
+    refiner_topk = 2
     refiner_pooling_method = "mean"
     refiner_encode_max_length = 256
 
@@ -154,7 +191,7 @@ def recomp(args):
         "refiner_model_path": refiner_model_path,
         "refiner_max_input_length": refiner_max_input_length,
         "refiner_max_output_length": refiner_max_output_length,
-        "refiner_topk": 5,
+        "refiner_topk": refiner_topk,
         "refiner_pooling_method": refiner_pooling_method,
         "refiner_encode_max_length": refiner_encode_max_length,
         "save_note": refiner_name,
@@ -164,7 +201,41 @@ def recomp(args):
     }
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
+    all_split = get_dataset(config)
+    test_data = all_split[args.split]
+
+    from flashrag.pipeline import SequentialPipeline
+
+    pipeline = SequentialPipeline(config)
+    result = pipeline.run(test_data)
+
+
+def recomp_llm_refiner(args):
+    """
+    Same pipeline as RECOMP but swap in an open-source decoder-only refiner (e.g., Llama).
+    """
+    refiner_name = "llm-refiner"
+    refiner_model_path = args.refiner_model_path or "meta-llama/Llama-2-7b-hf"
+    refiner_max_input_length = 1024
+    refiner_max_output_length = 512
+    refiner_batch_size = args.refiner_batch_size if args.refiner_batch_size is not None else 1
+    refiner_device = args.refiner_device if args.refiner_device is not None else "cuda"
+
+    config_dict = {
+        "refiner_name": refiner_name,
+        "refiner_model_path": refiner_model_path,
+        "refiner_max_input_length": refiner_max_input_length,
+        "refiner_max_output_length": refiner_max_output_length,
+        "refiner_batch_size": refiner_batch_size,
+        "refiner_device": refiner_device,
+        "save_note": "recomp-llm-refiner",
+        "gpu_id": args.gpu_id,
+        "dataset_name": args.dataset_name,
+        "split": args.split,
+    }
+
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -204,7 +275,7 @@ def sc(args):
     }
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -242,7 +313,7 @@ def retrobust(args):
         "dataset_name": args.dataset_name,
         "split": args.split,
     }
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -262,7 +333,7 @@ def sure(args):
         Official repo: https://github.com/bbuing9/ICLR24_SuRe
     """
     config_dict = {"save_note": "SuRe", "gpu_id": args.gpu_id, "dataset_name": args.dataset_name, "split": args.split}
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -282,7 +353,7 @@ def replug(args):
     config_dict = {"save_note": save_note, "gpu_id": args.gpu_id, "dataset_name": args.dataset_name, "split": args.split}
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
     pred_process_fun = lambda x: x.split("\n")[0]
@@ -334,7 +405,7 @@ def skr(args):
     }
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -366,7 +437,7 @@ def selfrag(args):
         "dataset_name": args.dataset_name,
         "split": args.split,
     }
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
 
     all_split = get_dataset(config)
     test_data = all_split[args.split]
@@ -399,7 +470,7 @@ def flare(args):
 
     """
     config_dict = {"save_note": "flare", "gpu_id": args.gpu_id, "dataset_name": args.dataset_name, "split": args.split}
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -427,7 +498,7 @@ def iterretgen(args):
         "split": args.split,
     }
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -449,7 +520,7 @@ def ircot(args):
     from flashrag.pipeline import IRCOTPipeline
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
     print(config["generator_model_path"])
@@ -487,7 +558,7 @@ def trace(args):
     }
 
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
     from flashrag.pipeline import SequentialPipeline
@@ -511,7 +582,7 @@ def spring(args):
         "framework": "hf",
         "split": args.split,
     }
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -553,7 +624,7 @@ def adaptive(args):
         "split": args.split,
     }
     # preparation
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -580,7 +651,7 @@ def rqrag(args):
         "max_depth": max_depth
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     
     all_split = get_dataset(config)
     test_data = all_split[args.split]
@@ -606,7 +677,7 @@ def r1searcher(args):
         "split": args.split,
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     
     all_split = get_dataset(config)
     test_data = all_split[args.split]
@@ -632,7 +703,7 @@ def searchr1(args):
         "split": args.split,
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
     
@@ -656,7 +727,7 @@ def autorefine(args):
         "split": args.split,
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
     
@@ -682,7 +753,7 @@ def o2searcher(args):
         "split": args.split,
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
     
@@ -707,7 +778,7 @@ def rearag(args):
         "split": args.split,
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
     
@@ -738,7 +809,7 @@ def corag(args):
         "split": args.split,
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]
 
@@ -762,7 +833,7 @@ def simpledeepsearcher(args):
         "split": args.split,
     }
 
-    config = Config("my_config.yaml", config_dict)
+    config = Config(args.config_path, config_dict)
     all_split = get_dataset(config)
     test_data = all_split[args.split]   
 
@@ -778,14 +849,24 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str)
     parser.add_argument("--dataset_name", type=str)
     parser.add_argument("--gpu_id", type=str)
+    parser.add_argument("--config_path", type=str, default="my_config.yaml")
+    parser.add_argument("--refiner_model_path", type=str, default=None)
+    parser.add_argument("--refiner_max_input_length", type=int, default=None)
+    parser.add_argument("--refiner_max_output_length", type=int, default=None)
+    parser.add_argument("--refiner_batch_size", type=int, default=None)
+    parser.add_argument("--refiner_device", type=str, default=None)
+    parser.add_argument("--refiner_torch_dtype", type=str, default=None)
 
-    
+
     func_dict = {
         "AAR-contriever": aar,
         "AAR-ANCE": aar,
         "naive": naive,
         "zero-shot": zero_shot,
         "llmlingua": llmlingua,
+        "llm-refiner": llm_refiner,
+        "decoder-llm-refiner": llm_refiner,
+        "open-llm-refiner": llm_refiner,
         "recomp": recomp,
         "selective-context": sc,
         "ret-robust": retrobust,
@@ -806,6 +887,7 @@ if __name__ == "__main__":
         "rearag": rearag,
         "corag": corag,
         "simpledeepsearcher": simpledeepsearcher,
+        "recomp-llm-refiner": recomp_llm_refiner,
     }
 
     args = parser.parse_args()

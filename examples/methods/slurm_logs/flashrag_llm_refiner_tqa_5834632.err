@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/home/hanzhanz/FlashRAG/examples/methods/run_exp.py", line 895, in <module>
+    func(args)
+  File "/home/hanzhanz/FlashRAG/examples/methods/run_exp.py", line 163, in llm_refiner
+    result = pipeline.run(test_data)
+  File "/home/hanzhanz/FlashRAG/flashrag/pipeline/pipeline.py", line 90, in run
+    input_query = dataset.question
+AttributeError: 'NoneType' object has no attribute 'question'
