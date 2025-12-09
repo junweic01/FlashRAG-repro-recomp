@@ -1,0 +1,36 @@
+Traceback (most recent call last):
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/hanzhanz/FlashRAG/flashrag/retriever/index_builder.py", line 684, in <module>
+    main()
+  File "/home/hanzhanz/FlashRAG/flashrag/retriever/index_builder.py", line 680, in main
+    index_builder.build_index()
+  File "/home/hanzhanz/FlashRAG/flashrag/retriever/index_builder.py", line 156, in build_index
+    self.build_dense_index()
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/hanzhanz/FlashRAG/flashrag/retriever/index_builder.py", line 542, in build_dense_index
+    self.encoder = Encoder(
+  File "/home/hanzhanz/FlashRAG/flashrag/retriever/encoder.py", line 37, in __init__
+    self.model, self.tokenizer = load_model(model_path=model_path, use_fp16=use_fp16)
+  File "/home/hanzhanz/FlashRAG/flashrag/retriever/utils.py", line 61, in load_model
+    model.to(get_device())
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/site-packages/transformers/modeling_utils.py", line 4343, in to
+    return super().to(*args, **kwargs)
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1369, in to
+    return self._apply(convert)
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/site-packages/torch/nn/modules/module.py", line 928, in _apply
+    module._apply(fn)
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/site-packages/torch/nn/modules/module.py", line 928, in _apply
+    module._apply(fn)
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/site-packages/torch/nn/modules/module.py", line 955, in _apply
+    param_applied = fn(param)
+  File "/home/hanzhanz/miniconda3/envs/flashrag/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1355, in convert
+    return t.to(
+torch.AcceleratorError: CUDA error: CUDA-capable device(s) is/are busy or unavailable
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
