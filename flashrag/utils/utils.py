@@ -158,6 +158,8 @@ def get_refiner(config, retriever=None, generator=None):
         refiner_class = "SelectiveContextRefiner"
     elif "kg-trace" in refiner_name:
         return getattr(REFINER_MODULE, "KGTraceRefiner")(config, retriever, generator)
+    elif "claude" in refiner_name.lower():
+        return getattr(REFINER_MODULE, "ClaudeRefiner")(config)
     else:
         raise ValueError("No implementation!")
 
