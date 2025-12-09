@@ -173,12 +173,14 @@ def recomp(args):
     # ###### Specified parameters ######
     refiner_name = "recomp-abstractive"  # recomp-extractive
     model_dict = {
-        "nq": "/data/user_data/hanzhanz/recomp/nq_abs",
-        "triviaqa": "/data/user_data/hanzhanz/recomp/tqa_abs",
-        "hotpotqa": "/data/user_data/hanzhanz/recomp/hotpotqa_abs",
+        "nq": "/home/ubuntu/FlashRAG-repro-recomp/recomp/nq",
+        "triviaqa": "/home/ubuntu/FlashRAG-repro-recomp/recomp/tqa",
+        "hotpotqa": "/home/ubuntu/FlashRAG-repro-recomp/recomp/hotpotqa",
     }
 
     refiner_model_path = model_dict.get(args.dataset_name, None)
+    print("loading model from")
+    print(refiner_model_path)
     refiner_max_input_length = 1024
     refiner_max_output_length = 512
     # parameters for extractive compress
@@ -194,6 +196,8 @@ def recomp(args):
         "refiner_topk": refiner_topk,
         "refiner_pooling_method": refiner_pooling_method,
         "refiner_encode_max_length": refiner_encode_max_length,
+        "framework": "hf",  # Use HuggingFace instead of vLLM for better memory management
+        "generator_batch_size": 1,  # Reduce batch size to save memory
         "save_note": refiner_name,
         "gpu_id": args.gpu_id,
         "dataset_name": args.dataset_name,
@@ -243,6 +247,54 @@ def recomp_llm_refiner(args):
 
     pipeline = SequentialPipeline(config)
     result = pipeline.run(test_data)
+
+def gpt(args):
+    """
+    GPT-based abstractive refiner:
+    Same setup as `recomp`, but instead of the RECOMP abstractive compressor,
+    we use a GPT refiner (via CMU AI Gateway) to summarize the retrieved docs
+    before passing them to the generator.
+    """
+
+    # These settings override the base my_config.yaml.
+    # Retrieval, generator model, datasets, etc. still come from my_config.yaml.
+    config_dict = {
+        # Use the GPTRefiner we defined in flashrag.refiner.gpt_refiner
+        "refiner_name": "gpt",
+
+        # For the GPT refiner itself
+        "gpt_refiner_model": "gpt-4o-mini-2024-07-18",     # or another gateway model name
+        "gpt_refiner_temperature": 0.0,
+
+        # Prompt/response length controls inside GPTRefiner
+        "refiner_max_input_length": 1024,
+        "refiner_max_output_length": 512,
+
+        # Keep the generator side consistent with recompt’s “safer” settings
+        "framework": "hf",          # use HF, not vllm, for memory stability
+        "generator_batch_size": 1,  # small batch size to save memory
+
+        # Logging / bookkeeping
+        "save_note": "gpt_refiner",
+
+        # Run-time overrides from CLI
+        "gpu_id": args.gpu_id,
+        "dataset_name": args.dataset_name,
+        "split": args.split,
+    }
+
+    # Build config on top of my_config.yaml + overrides above
+    config = Config("my_config.yaml", config_dict)
+
+    # Load dataset (same helper as recompt)
+    all_split = get_dataset(config)
+    test_data = all_split[args.split]
+
+    # Build and run the same SequentialPipeline, only refiner is different
+    from flashrag.pipeline import SequentialPipeline
+    pipeline = SequentialPipeline(config)
+    result = pipeline.run(test_data)
+
 
 
 def sc(args):
@@ -842,6 +894,33 @@ def simpledeepsearcher(args):
     result = pipeline.run(test_data)
 
 
+def claude(args):
+    """
+    Run experiment with Claude Refiner.
+    """
+    save_note = "claude"
+    config_dict = {
+        "save_note": save_note,
+        "gpu_id": args.gpu_id,
+        "dataset_name": args.dataset_name,
+        "split": args.split,
+        "refiner_name": "claude",
+        "refiner_model_path": "claude-sonnet-4-20250514-v1:0",
+        "refiner_input_prompt_flag": False
+    }
+
+    # Load base config
+    config = Config("claude_config.yaml", config_dict)
+    
+    # Load dataset
+    all_split = get_dataset(config)
+    test_data = all_split[args.split]
+
+    from flashrag.pipeline import SequentialPipeline
+    pipeline = SequentialPipeline(config)
+    result = pipeline.run(test_data)
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Running exp")
@@ -868,6 +947,7 @@ if __name__ == "__main__":
         "decoder-llm-refiner": llm_refiner,
         "open-llm-refiner": llm_refiner,
         "recomp": recomp,
+        "gpt": gpt,
         "selective-context": sc,
         "ret-robust": retrobust,
         "sure": sure,
@@ -877,6 +957,7 @@ if __name__ == "__main__":
         "flare": flare,
         "iterretgen": iterretgen,
         "ircot": ircot,
+        "claude": claude,
         "trace": trace,
         "adaptive": adaptive,
         "rqrag": rqrag,

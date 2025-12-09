@@ -121,6 +121,7 @@ def get_judger(config):
 
 def get_refiner(config, retriever=None, generator=None):
     # 预定义默认路径字典
+    # print(f"in get_refiner, name is {config["refiner_name"]}")
     DEFAULT_PATH_DICT = {
         "recomp_abstractive_nq": "fangyuan/nq_abstractive_compressor",
         "recomp:abstractive_tqa": "fangyuan/tqa_abstractive_compressor",
@@ -129,6 +130,11 @@ def get_refiner(config, retriever=None, generator=None):
     REFINER_MODULE = importlib.import_module("flashrag.refiner")
 
     refiner_name = config["refiner_name"]
+
+    if refiner_name is not None and "gpt" in refiner_name.lower():
+        return getattr(REFINER_MODULE, "GPTRefiner")(config)
+
+
     refiner_path = (
         config["refiner_model_path"]
         if config["refiner_model_path"] is not None
@@ -161,6 +167,8 @@ def get_refiner(config, retriever=None, generator=None):
     elif refiner_name.lower() in ["llm-refiner", "decoder-llm-refiner", "open-llm-refiner"] or \
             any(key in arch for key in ["causallm", "gpt", "llama", "mistral"]):
         refiner_class = "LLMAbstractiveRefiner"
+    elif "claude" in refiner_name.lower():
+        return getattr(REFINER_MODULE, "ClaudeRefiner")(config)
     else:
         raise ValueError("No implementation!")
 
