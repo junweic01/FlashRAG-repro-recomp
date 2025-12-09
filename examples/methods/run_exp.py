@@ -136,12 +136,14 @@ def recomp(args):
     # ###### Specified parameters ######
     refiner_name = "recomp-abstractive"  # recomp-extractive
     model_dict = {
-        "nq": "/home/ec2-user/flashrag/recomp/nq",
-        "triviaqa": "/home/ec2-user/flashrag/recomp/tqa",
-        "hotpotqa": "/home/ec2-user/flashrag/recomp/hotpotqa",
+        "nq": "/home/ubuntu/FlashRAG-repro-recomp/recomp/nq",
+        "triviaqa": "/home/ubuntu/FlashRAG-repro-recomp/recomp/tqa",
+        "hotpotqa": "/home/ubuntu/FlashRAG-repro-recomp/recomp/hotpotqa",
     }
 
     refiner_model_path = model_dict.get(args.dataset_name, None)
+    print("loading model from")
+    print(refiner_model_path)
     refiner_max_input_length = 1024
     refiner_max_output_length = 512
     # parameters for extractive compress
@@ -174,6 +176,54 @@ def recomp(args):
 
     pipeline = SequentialPipeline(config)
     result = pipeline.run(test_data)
+
+def gpt(args):
+    """
+    GPT-based abstractive refiner:
+    Same setup as `recomp`, but instead of the RECOMP abstractive compressor,
+    we use a GPT refiner (via CMU AI Gateway) to summarize the retrieved docs
+    before passing them to the generator.
+    """
+
+    # These settings override the base my_config.yaml.
+    # Retrieval, generator model, datasets, etc. still come from my_config.yaml.
+    config_dict = {
+        # Use the GPTRefiner we defined in flashrag.refiner.gpt_refiner
+        "refiner_name": "gpt",
+
+        # For the GPT refiner itself
+        "gpt_refiner_model": "gpt-4o-mini-2024-07-18",     # or another gateway model name
+        "gpt_refiner_temperature": 0.0,
+
+        # Prompt/response length controls inside GPTRefiner
+        "refiner_max_input_length": 1024,
+        "refiner_max_output_length": 512,
+
+        # Keep the generator side consistent with recompt’s “safer” settings
+        "framework": "hf",          # use HF, not vllm, for memory stability
+        "generator_batch_size": 1,  # small batch size to save memory
+
+        # Logging / bookkeeping
+        "save_note": "gpt_refiner",
+
+        # Run-time overrides from CLI
+        "gpu_id": args.gpu_id,
+        "dataset_name": args.dataset_name,
+        "split": args.split,
+    }
+
+    # Build config on top of my_config.yaml + overrides above
+    config = Config("my_config.yaml", config_dict)
+
+    # Load dataset (same helper as recompt)
+    all_split = get_dataset(config)
+    test_data = all_split[args.split]
+
+    # Build and run the same SequentialPipeline, only refiner is different
+    from flashrag.pipeline import SequentialPipeline
+    pipeline = SequentialPipeline(config)
+    result = pipeline.run(test_data)
+
 
 
 def sc(args):
@@ -816,6 +866,7 @@ if __name__ == "__main__":
         "zero-shot": zero_shot,
         "llmlingua": llmlingua,
         "recomp": recomp,
+        "gpt": gpt,
         "selective-context": sc,
         "ret-robust": retrobust,
         "sure": sure,

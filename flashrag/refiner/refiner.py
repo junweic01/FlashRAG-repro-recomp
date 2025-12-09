@@ -5,6 +5,9 @@ from tqdm import tqdm
 import re
 import torch
 import numpy as np
+from openai import OpenAI
+import os
+
 
 class BaseRefiner:
     r"""Base object of Refiner method"""
@@ -255,3 +258,128 @@ class AbstractiveRecompRefiner(BaseRefiner):
             results.extend(batch_outputs)
 
         return results
+
+class GPTRefiner(BaseRefiner):
+    """
+    Refiner that uses an external GPT model to do abstractive compression
+    of retrieved documents, analogous to AbstractiveRecompRefiner but via
+    OpenAI's chat completion API.
+
+    It takes top-k retrieved docs + the question and returns a single
+    compressed summary string per item.
+    """
+
+    def __init__(self, config):
+        super().__init__(config)
+
+        # how much to feed and how much to generate
+        self.max_input_length = config["refiner_max_input_length"] if "refiner_max_input_length" in config else 1024
+        self.max_output_length = config["refiner_max_output_length"] if "refiner_max_output_length" in config else 512
+
+        # how many retrieved docs to include
+        self.topk = config["refiner_topk"] if "refiner_topk" in config else 5
+
+        # GPT model + temperature (can be overridden in config_dict)
+        self.model_name = config["gpt_refiner_model"]
+        self.temperature = config["gpt_refiner_temperature"] if "gpt_refiner_temperature" in config else 0.0
+
+        # expects OPENAI_API_KEY in env
+        self.client = OpenAI(
+            api_key=os.environ.get("OPENAI_API_KEY"),
+            base_url="https://ai-gateway.andrew.cmu.edu/"
+        )
+
+        self.max_fallback_chars = 2000  
+
+
+    def _format_reference(self, retrieval_result):
+        """
+        Turn retrieval_result (list of doc dicts) into a list of plain-text docs.
+        Mirrors the 'only use text after the first line (title)' pattern used
+        elsewhere in this file.
+        """
+        docs = [
+            "\n".join(doc_item["contents"].split("\n")[1:])
+            for doc_item in retrieval_result
+        ]
+        # keep top-k docs
+        return docs[: self.topk]
+
+    def _build_prompt(self, question: str, docs: list[str]) -> str:
+        """
+        Build a compression prompt for GPT.
+        """
+        joined_docs = "\n\n".join(
+            [f"[Doc {i+1}]\n{doc}" for i, doc in enumerate(docs)]
+        )
+
+        prompt = (
+                "You are a compression module for a retrieval system.\n"
+                "Summarize the following documents into a concise, fact-dense passage.\n"
+                "Do NOT answer the user's question.\n"
+                "Do NOT comment on relevance.\n"
+                "Do NOT mention missing information.\n"
+                "Only compress the documents themselves.\n\n"
+                f"Retrieved documents:\n{joined_docs}\n\n"
+            )
+
+        # (Optional) very rough truncation by characters to avoid overlong prompts
+        if len(prompt) > 4 * self.max_input_length:
+            prompt = prompt[-4 * self.max_input_length :]
+
+        return prompt
+
+    def batch_run(self, dataset, batch_size=None):
+        """
+        FlashRAG's pipelines call batch_run(dataset) on refiner classes
+        (see AbstractiveRecompRefiner), so we implement this entrypoint.
+
+        dataset: something indexable with attributes:
+            - item.question
+            - item.retrieval_result (list of doc dicts with 'contents')
+        """
+        results = []
+        for item in tqdm(dataset, desc="Refining process (GPT): "):
+            question = item.question
+            retrieval_result = item.retrieval_result
+
+            # print("\n====================")
+            # print("QUESTION:", question)
+            # print("\nRETRIEVED DOCS:")
+            
+            # for j, d in enumerate(retrieval_result):
+            #     print(f"\n--- Doc {j+1} ---")
+            #     print(d["contents"][:500], "...")
+
+            docs = self._format_reference(retrieval_result)
+            prompt = self._build_prompt(question, docs)
+
+            # joined_docs = "\n\n".join(
+            #         [f"[Doc {i+1}]\n{doc}" for i, doc in enumerate(docs)]
+            #     )
+            # doc_len = len(joined_docs)
+            # print(f"total len: {doc_len}")
+
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=self.max_output_length,
+                    temperature=self.temperature,
+                )
+
+                summary = response.choices[0].message.content.strip()
+            except Exception as e:
+                print(f"[GPTRefiner] Error during summarization: {e}")
+                joined_docs = "\n\n".join(
+                    [f"[Doc {i+1}]\n{doc}" for i, doc in enumerate(docs)]
+                )
+                fallback_summary = joined_docs[: self.max_fallback_chars]
+                summary = fallback_summary
+            # print("\nREFINED SUMMARY (GPT):")
+            # print(f"summary len: {len(summary)}")
+            # print(summary)
+            results.append(summary)
+
+        return results
+
